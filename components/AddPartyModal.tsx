@@ -185,13 +185,15 @@ export default function AddPartyModal({
           <div>
             <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground mb-2">
               <Phone size={16} className="sm:size-[18px]" />
-              Phone
+              Phone <span className="text-red-500">*</span>
             </label>
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              placeholder="e.g. +1 555 123 4567"
+              required={mode === 'add'}
               className="w-full rounded-lg border border-border px-3 sm:px-4 py-2 sm:py-3 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>

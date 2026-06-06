@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createCustomer, listCustomers, updateCustomer } from '@/lib/customer-store';
+import {
+  createCustomer,
+  getWaitlistPosition,
+  listCustomers,
+  updateCustomer,
+} from '@/lib/customer-store';
+import { buildWaitlistAddedMessage, sendSms } from '@/lib/twilio';
 
 export async function GET() {
   const customers = await listCustomers();
@@ -7,21 +13,44 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  try {
+    const body = await request.json();
 
-  if (!body?.name || !body?.partySize || !body?.waitTime || !body?.type) {
-    return NextResponse.json({ error: 'Missing required customer fields' }, { status: 400 });
+    if (!body?.name || !body?.partySize || !body?.waitTime || !body?.type || !body?.phone) {
+      return NextResponse.json(
+        { error: 'Missing required customer fields (name, partySize, waitTime, type, phone)' },
+        { status: 400 },
+      );
+    }
+
+    const customer = await createCustomer({
+      name: body.name,
+      partySize: Number(body.partySize),
+      waitTime: Number(body.waitTime),
+      type: body.type,
+      phone: body.phone,
+    });
+
+    try {
+      const position = await getWaitlistPosition(customer.sequence);
+      await sendSms(
+        customer.phone!,
+        buildWaitlistAddedMessage({
+          name: customer.name,
+          position,
+          partySize: customer.partySize,
+          estimatedWait: customer.waitTime,
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to send waitlist SMS', error);
+    }
+
+    return NextResponse.json(customer, { status: 201 });
+  } catch (error) {
+    console.error('POST /api/customers failed', error);
+    return NextResponse.json({ error: 'Failed to add customer' }, { status: 500 });
   }
-
-  const customer = await createCustomer({
-    name: body.name,
-    partySize: Number(body.partySize),
-    waitTime: Number(body.waitTime),
-    type: body.type,
-    phone: body.phone,
-  });
-
-  return NextResponse.json(customer, { status: 201 });
 }
 
 export async function PATCH(request: Request) {

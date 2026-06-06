@@ -42,6 +42,18 @@ export async function listCustomers() {
   return customers.find().sort({ sequence: 1, addedAt: 1 }).toArray();
 }
 
+export async function getCustomerById(id: string) {
+  const database = await getDatabase();
+  const { customers } = getCollections(database);
+  return customers.findOne({ id });
+}
+
+export async function getWaitlistPosition(sequence: number) {
+  const database = await getDatabase();
+  const { customers } = getCollections(database);
+  return customers.countDocuments({ status: 'waiting', sequence: { $lte: sequence } });
+}
+
 export async function createCustomer(input: CreateCustomerInput) {
   const database = await getDatabase();
   const { customers, counters } = getCollections(database);
