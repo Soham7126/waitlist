@@ -31,6 +31,20 @@ const defaultFormData = {
   phone: '',
 };
 
+const formatIndianPhone = (value: string) => {
+  let digits = value.replace(/\D/g, '');
+
+  if (value.trimStart().startsWith('+91') || (digits.startsWith('91') && digits.length > 10)) {
+    digits = digits.slice(2);
+  }
+
+  digits = digits.slice(0, 10);
+
+  if (!digits) return '';
+
+  return `+91 ${digits.slice(0, 5)}${digits.length > 5 ? ` ${digits.slice(5)}` : ''}`;
+};
+
 export default function AddPartyModal({
   isOpen,
   mode = 'add',
@@ -44,7 +58,11 @@ export default function AddPartyModal({
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(initialValues ?? defaultFormData);
+      setFormData(
+        initialValues
+          ? { ...initialValues, phone: formatIndianPhone(initialValues.phone) }
+          : defaultFormData
+      );
       setSubmissionError('');
     }
   }, [initialValues, isOpen]);
@@ -55,7 +73,7 @@ export default function AddPartyModal({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'phone' ? formatIndianPhone(value) : value,
     }));
   };
 
@@ -192,7 +210,10 @@ export default function AddPartyModal({
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="e.g. +1 555 123 4567"
+              placeholder="e.g. +91 12345 67898"
+              pattern="\+91 [6-9][0-9]{4} [0-9]{5}"
+              title="Enter a valid 10-digit Indian mobile number"
+              maxLength={16}
               required={mode === 'add'}
               className="w-full rounded-lg border border-border px-3 sm:px-4 py-2 sm:py-3 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
