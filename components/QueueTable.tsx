@@ -127,6 +127,11 @@ const CustomerCard = ({
             <div className="font-semibold text-foreground text-sm">{customer.name}</div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-xs text-muted-foreground">👤 {customer.partySize}</span>
+              {customer.tableNumbers?.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Table {customer.tableNumbers.join(' & ')}
+                </span>
+              )}
               {customer.phone && <span className="text-xs text-muted-foreground">{customer.phone}</span>}
               <TypeBadge type={customer.type} />
             </div>
@@ -263,6 +268,9 @@ const CustomerRow = ({
         <div className="font-medium text-sm sm:text-base text-foreground">{customer.name}</div>
         <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1 flex-wrap">
           <span>👤 {customer.partySize}</span>
+          {customer.tableNumbers?.length > 0 && (
+            <span>Table {customer.tableNumbers.join(' & ')}</span>
+          )}
           {customer.phone && <span className="hidden sm:inline">{customer.phone}</span>}
           <TypeBadge type={customer.type} />
         </div>

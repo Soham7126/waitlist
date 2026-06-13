@@ -11,6 +11,7 @@ export interface CustomerRecord {
   waitTime: number;
   type: string;
   phone?: string;
+  tableNumbers: number[];
   addedAt: Date;
   status: CustomerStatus;
   token: string;
@@ -23,6 +24,7 @@ export interface CreateCustomerInput {
   waitTime: number;
   type: string;
   phone?: string;
+  tableNumbers: number[];
 }
 
 const CUSTOMERS_COLLECTION = 'customers';
@@ -64,9 +66,9 @@ export async function createCustomer(input: CreateCustomerInput) {
     { upsert: true, returnDocument: 'after' }
   );
 
-  const counterDocument =
+  const counterDocument: { sequence?: number } | null =
     nextCounter && typeof nextCounter === 'object' && 'value' in nextCounter
-      ? nextCounter.value
+      ? (nextCounter.value as { sequence?: number } | null)
       : nextCounter;
   const sequence = counterDocument?.sequence ?? 1;
   const customer: CustomerRecord = {
@@ -76,6 +78,7 @@ export async function createCustomer(input: CreateCustomerInput) {
     waitTime: input.waitTime,
     type: input.type,
     phone: input.phone,
+    tableNumbers: input.tableNumbers,
     addedAt: new Date(),
     status: 'waiting',
     token: `A${sequence}`,
@@ -96,6 +99,7 @@ export async function updateCustomer(id: string, updates: Partial<CreateCustomer
     ...(updates.waitTime !== undefined ? { waitTime: updates.waitTime } : {}),
     ...(updates.type !== undefined ? { type: updates.type } : {}),
     ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
+    ...(updates.tableNumbers !== undefined ? { tableNumbers: updates.tableNumbers } : {}),
   };
 
   const updateResult = await customers.updateOne({ id }, { $set: fieldsToUpdate });

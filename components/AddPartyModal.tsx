@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Users, Clock, Tag, Phone, User } from 'lucide-react';
+import { X, Users, Clock, Tag, Phone, User, Hash } from 'lucide-react';
 
 interface AddPartyModalProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface AddPartyModalProps {
     waitTime: string;
     type: string;
     phone: string;
+    tableNumbers: string;
   };
   onClose: () => void;
   onSubmit: (data: {
@@ -20,6 +21,7 @@ interface AddPartyModalProps {
     waitTime: number;
     type: string;
     phone?: string;
+    tableNumbers: number[];
   }) => Promise<void>;
 }
 
@@ -29,6 +31,7 @@ const defaultFormData = {
   waitTime: '15',
   type: 'Walk-in',
   phone: '',
+  tableNumbers: '',
 };
 
 const formatIndianPhone = (value: string) => {
@@ -84,12 +87,27 @@ export default function AddPartyModal({
       setSubmissionError('');
 
       try {
+        const tableNumbers = formData.tableNumbers
+          .split(',')
+          .map((tableNumber) => Number(tableNumber.trim()))
+          .filter((tableNumber) => Number.isInteger(tableNumber) && tableNumber > 0);
+
+        if (
+          tableNumbers.length === 0 ||
+          tableNumbers.length > 2 ||
+          tableNumbers.length !== formData.tableNumbers.split(',').length
+        ) {
+          setSubmissionError('Enter one or two table numbers separated by a comma.');
+          return;
+        }
+
         await onSubmit({
           name: formData.name,
           partySize: Number(formData.partySize),
           waitTime: Number(formData.waitTime),
           type: formData.type,
           phone: formData.phone || undefined,
+          tableNumbers,
         });
         setFormData(defaultFormData);
         onClose();
@@ -180,6 +198,28 @@ export default function AddPartyModal({
             </div>
           </div>
 
+          {/* Table Numbers */}
+          <div>
+            <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground mb-2">
+              <Hash size={16} className="sm:size-[18px]" />
+              Table Numbers <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="tableNumbers"
+              value={formData.tableNumbers}
+              onChange={handleChange}
+              placeholder="e.g. 12, 13"
+              pattern="\s*[0-9]+\s*(,\s*[0-9]+\s*)?"
+              title="Enter one or two table numbers separated by a comma"
+              required
+              className="w-full rounded-lg border border-border px-3 sm:px-4 py-2 sm:py-3 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Enter up to two table numbers, separated by a comma.
+            </p>
+          </div>
+
           {/* Type */}
           <div>
             <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground mb-2">
@@ -195,7 +235,7 @@ export default function AddPartyModal({
               <option>Walk-in</option>
               <option>Easy Diner</option>
               <option>Zomato</option>
-              <option>Swiggy Diner</option>
+              <option>Swiggy Dineout</option>
             </select>
           </div>
 

@@ -6,6 +6,7 @@ import StatsCards from '@/components/StatsCards';
 import QueueTabs from '@/components/QueueTabs';
 import QueueTable from '@/components/QueueTable';
 import AddPartyModal from '@/components/AddPartyModal';
+import AnalyticsTab from '@/components/AnalyticsTab';
 
 export interface Customer {
   id: string;
@@ -14,6 +15,7 @@ export interface Customer {
   waitTime: number;
   type: string;
   phone?: string;
+  tableNumbers: number[];
   addedAt: Date;
   status: 'waiting' | 'ready' | 'seated' | 'cancelled';
   token: string;
@@ -23,7 +25,7 @@ export default function Home() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'history' | 'analytics'>('active');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +52,10 @@ export default function Home() {
     };
 
     void loadCustomers();
+
+    // Refresh every 60 seconds so the analytics graph stays up to date
+    const interval = setInterval(() => { void loadCustomers(); }, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   const activeCustomers = customers.filter((c) => c.status === 'waiting' || c.status === 'ready');
@@ -74,6 +80,7 @@ export default function Home() {
     waitTime: number;
     type: string;
     phone?: string;
+    tableNumbers: number[];
   }) => {
     const response = await fetch('/api/customers', {
       method: editingCustomer ? 'PATCH' : 'POST',
@@ -178,10 +185,15 @@ export default function Home() {
         waitTime: String(editingCustomer.waitTime),
         type: editingCustomer.type,
         phone: editingCustomer.phone ?? '',
+        tableNumbers: editingCustomer.tableNumbers?.join(', ') ?? '',
       }
     : undefined;
 
   const displayCustomers = activeTab === 'active' ? activeCustomers : seatedCustomers;
+
+  const handleTabChange = (tab: 'active' | 'history' | 'analytics') => {
+    setActiveTab(tab);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,18 +202,22 @@ export default function Home() {
         <StatsCards stats={stats} />
 
         <div className="mt-6 sm:mt-8">
-          <QueueTabs activeTab={activeTab} onTabChange={setActiveTab} />
-          <QueueTable
-            customers={displayCustomers}
-            onMarkReady={handleMarkReady}
-            onSeat={handleSeat}
-            onCancel={handleCancel}
-            onDelete={handleDelete}
-            onEdit={handleEditCustomer}
-            isHistoryView={activeTab === 'history'}
-            isEmpty={displayCustomers.length === 0}
-            isLoading={isLoading}
-          />
+          <QueueTabs activeTab={activeTab} onTabChange={handleTabChange} />
+          {activeTab === 'analytics' ? (
+            <AnalyticsTab customers={customers} />
+          ) : (
+            <QueueTable
+              customers={displayCustomers}
+              onMarkReady={handleMarkReady}
+              onSeat={handleSeat}
+              onCancel={handleCancel}
+              onDelete={handleDelete}
+              onEdit={handleEditCustomer}
+              isHistoryView={activeTab === 'history'}
+              isEmpty={displayCustomers.length === 0}
+              isLoading={isLoading}
+            />
+          )}
         </div>
       </div>
 
