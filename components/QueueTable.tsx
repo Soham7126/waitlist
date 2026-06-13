@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check, Undo2 } from 'lucide-react';
 import type { Customer } from '@/app/page';
 
 interface QueueTableProps {
   customers: Customer[];
   onMarkReady: (id: string) => void;
+  onUndoReady: (id: string) => void;
   onSeat: (id: string) => void;
   onCancel: (id: string) => void;
   onDelete: (id: string) => void;
@@ -78,6 +79,7 @@ const TypeBadge = ({ type }: { type: string }) => {
 const CustomerCard = ({
   customer,
   onMarkReady,
+  onUndoReady,
   onSeat,
   onCancel,
   onDelete,
@@ -86,6 +88,7 @@ const CustomerCard = ({
 }: {
   customer: Customer;
   onMarkReady: (id: string) => void;
+  onUndoReady: (id: string) => void;
   onSeat: (id: string) => void;
   onCancel: (id: string) => void;
   onDelete: (id: string) => void;
@@ -190,6 +193,13 @@ const CustomerCard = ({
         ) : customer.status === 'ready' ? (
           <>
             <button
+              onClick={() => onUndoReady(customer.id)}
+              className="flex-1 min-w-fit inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border-2 border-gray-300 text-gray-600 font-semibold hover:bg-gray-50 transition-colors text-sm"
+            >
+              <Undo2 size={16} />
+              <span>Undo Ready</span>
+            </button>
+            <button
               onClick={() => onSeat(customer.id)}
               className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors text-sm"
             >
@@ -219,6 +229,7 @@ const CustomerCard = ({
 const CustomerRow = ({
   customer,
   onMarkReady,
+  onUndoReady,
   onSeat,
   onCancel,
   onDelete,
@@ -227,6 +238,7 @@ const CustomerRow = ({
 }: {
   customer: Customer;
   onMarkReady: (id: string) => void;
+  onUndoReady: (id: string) => void;
   onSeat: (id: string) => void;
   onCancel: (id: string) => void;
   onDelete: (id: string) => void;
@@ -320,6 +332,14 @@ const CustomerRow = ({
           ) : customer.status === 'ready' ? (
             <>
               <button
+                onClick={() => onUndoReady(customer.id)}
+                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-300 text-gray-600 font-semibold hover:bg-gray-50 transition-colors text-xs sm:text-sm"
+              >
+                <Undo2 size={14} />
+                <span className="hidden sm:inline">Undo Ready</span>
+                <span className="sm:hidden">Undo</span>
+              </button>
+              <button
                 onClick={() => onSeat(customer.id)}
                 className="inline-flex items-center gap-1 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors text-xs sm:text-sm"
               >
@@ -350,6 +370,7 @@ const CustomerRow = ({
 export default function QueueTable({
   customers,
   onMarkReady,
+  onUndoReady,
   onSeat,
   onCancel,
   onDelete,
@@ -379,6 +400,7 @@ export default function QueueTable({
                 key={customer.id}
                 customer={customer}
                 onMarkReady={onMarkReady}
+                onUndoReady={onUndoReady}
                 onSeat={onSeat}
                 onCancel={onCancel}
                 onDelete={onDelete}
@@ -419,6 +441,7 @@ export default function QueueTable({
                     key={customer.id}
                     customer={customer}
                     onMarkReady={onMarkReady}
+                    onUndoReady={onUndoReady}
                     onSeat={onSeat}
                     onCancel={onCancel}
                     onDelete={onDelete}

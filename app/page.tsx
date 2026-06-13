@@ -144,6 +144,12 @@ export default function Home() {
     });
   };
 
+  const handleUndoReady = (id: string) => {
+    void handleStatusChange(id, 'waiting').catch((error) => {
+      console.error('Failed to undo ready', error);
+    });
+  };
+
   const handleSeat = (id: string) => {
     void handleStatusChange(id, 'seated').catch((error) => {
       console.error('Failed to seat customer', error);
@@ -209,6 +215,7 @@ export default function Home() {
             <QueueTable
               customers={displayCustomers}
               onMarkReady={handleMarkReady}
+              onUndoReady={handleUndoReady}
               onSeat={handleSeat}
               onCancel={handleCancel}
               onDelete={handleDelete}
