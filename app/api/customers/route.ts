@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
   createCustomer,
-  getWaitlistPosition,
   listCustomers,
   updateCustomer,
 } from '@/lib/customer-store';
-import { buildWaitlistAddedMessage, sendSms } from '@/lib/twilio';
 
 function parseTableNumbers(value: unknown) {
   if (!Array.isArray(value)) {
@@ -45,21 +43,6 @@ export async function POST(request: Request) {
       phone: body.phone,
       tableNumbers,
     });
-
-    try {
-      const position = await getWaitlistPosition(customer.sequence);
-      await sendSms(
-        customer.phone!,
-        buildWaitlistAddedMessage({
-          name: customer.name,
-          position,
-          partySize: customer.partySize,
-          estimatedWait: customer.waitTime,
-        }),
-      );
-    } catch (error) {
-      console.error('Failed to send waitlist SMS', error);
-    }
 
     return NextResponse.json(customer, { status: 201 });
   } catch (error) {

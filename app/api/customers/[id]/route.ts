@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { deleteCustomer, getCustomerById, updateCustomerStatus } from '@/lib/customer-store';
-import { buildTableReadyMessage, sendSms } from '@/lib/twilio';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,18 +20,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
-    }
-
-    if (
-      body.status === 'ready' &&
-      existingCustomer.status === 'waiting' &&
-      customer.phone
-    ) {
-      try {
-        await sendSms(customer.phone, buildTableReadyMessage(customer.name));
-      } catch (error) {
-        console.error('Failed to send table ready SMS', error);
-      }
     }
 
     return NextResponse.json(customer);
