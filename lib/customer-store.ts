@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { Db } from 'mongodb';
 import { getDatabase } from '@/lib/mongodb';
+import { decrypt, encrypt, isEncrypted } from '@/lib/crypto';
 
 export type CustomerStatus = 'waiting' | 'ready' | 'seated' | 'cancelled';
 
@@ -27,6 +28,17 @@ export interface CreateCustomerInput {
   tableNumbers: number[];
 }
 
+function encryptPhone(phone: string | undefined): string | undefined {
+  return phone ? encrypt(phone) : undefined;
+}
+
+function decryptRecord(record: CustomerRecord): CustomerRecord {
+  if (record.phone && isEncrypted(record.phone)) {
+    return { ...record, phone: decrypt(record.phone) };
+  }
+  return record;
+}
+
 const CUSTOMERS_COLLECTION = 'customers';
 const COUNTERS_COLLECTION = 'counters';
 const CUSTOMER_TOKEN_COUNTER = 'customerToken';
@@ -41,13 +53,15 @@ function getCollections(database: Db) {
 export async function listCustomers() {
   const database = await getDatabase();
   const { customers } = getCollections(database);
-  return customers.find().sort({ sequence: 1, addedAt: 1 }).toArray();
+  const records = await customers.find().sort({ sequence: 1, addedAt: 1 }).toArray();
+  return records.map(decryptRecord);
 }
 
 export async function getCustomerById(id: string) {
   const database = await getDatabase();
   const { customers } = getCollections(database);
-  return customers.findOne({ id });
+  const record = await customers.findOne({ id });
+  return record ? decryptRecord(record) : null;
 }
 
 export async function getWaitlistPosition(sequence: number) {
@@ -77,7 +91,7 @@ export async function createCustomer(input: CreateCustomerInput) {
     partySize: input.partySize,
     waitTime: input.waitTime,
     type: input.type,
-    phone: input.phone,
+    phone: encryptPhone(input.phone),
     tableNumbers: input.tableNumbers,
     addedAt: new Date(),
     status: 'waiting',
@@ -86,7 +100,7 @@ export async function createCustomer(input: CreateCustomerInput) {
   };
 
   await customers.insertOne(customer);
-  return customer;
+  return decryptRecord(customer);
 }
 
 export async function updateCustomer(id: string, updates: Partial<CreateCustomerInput>) {
@@ -98,7 +112,7 @@ export async function updateCustomer(id: string, updates: Partial<CreateCustomer
     ...(updates.partySize !== undefined ? { partySize: updates.partySize } : {}),
     ...(updates.waitTime !== undefined ? { waitTime: updates.waitTime } : {}),
     ...(updates.type !== undefined ? { type: updates.type } : {}),
-    ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
+    ...(updates.phone !== undefined ? { phone: encryptPhone(updates.phone) } : {}),
     ...(updates.tableNumbers !== undefined ? { tableNumbers: updates.tableNumbers } : {}),
   };
 
@@ -108,7 +122,8 @@ export async function updateCustomer(id: string, updates: Partial<CreateCustomer
     return null;
   }
 
-  return customers.findOne({ id });
+  const record = await customers.findOne({ id });
+  return record ? decryptRecord(record) : null;
 }
 
 export async function updateCustomerStatus(id: string, status: CustomerStatus) {
@@ -124,7 +139,8 @@ export async function updateCustomerStatus(id: string, status: CustomerStatus) {
     return null;
   }
 
-  return customers.findOne({ id });
+  const record = await customers.findOne({ id });
+  return record ? decryptRecord(record) : null;
 }
 
 export async function deleteCustomer(id: string) {
