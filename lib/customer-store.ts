@@ -43,10 +43,18 @@ const CUSTOMERS_COLLECTION = 'customers';
 const COUNTERS_COLLECTION = 'counters';
 const CUSTOMER_TOKEN_COUNTER = 'customerToken';
 
+function getISTDateString(): string {
+  // IST = UTC+5:30
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + istOffset);
+  return istDate.toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
 function getCollections(database: Db) {
   return {
     customers: database.collection<CustomerRecord>(CUSTOMERS_COLLECTION),
-    counters: database.collection<{ _id: string; sequence: number }>(COUNTERS_COLLECTION),
+    counters: database.collection<{ _id: string; sequence: number; date?: string }>(COUNTERS_COLLECTION),
   };
 }
 
@@ -74,17 +82,31 @@ export async function createCustomer(input: CreateCustomerInput) {
   const database = await getDatabase();
   const { customers, counters } = getCollections(database);
 
-  const nextCounter = await counters.findOneAndUpdate(
-    { _id: CUSTOMER_TOKEN_COUNTER },
-    { $inc: { sequence: 1 } },
-    { upsert: true, returnDocument: 'after' }
-  );
+  const today = getISTDateString();
 
-  const counterDocument: { sequence?: number } | null =
-    nextCounter && typeof nextCounter === 'object' && 'value' in nextCounter
-      ? (nextCounter.value as { sequence?: number } | null)
-      : nextCounter;
-  const sequence = counterDocument?.sequence ?? 1;
+  // Reset counter to 1 if it's a new IST day, otherwise increment
+  const existing = await counters.findOne({ _id: CUSTOMER_TOKEN_COUNTER });
+  let sequence: number;
+
+  if (!existing || existing.date !== today) {
+    await counters.updateOne(
+      { _id: CUSTOMER_TOKEN_COUNTER },
+      { $set: { sequence: 1, date: today } },
+      { upsert: true },
+    );
+    sequence = 1;
+  } else {
+    const nextCounter = await counters.findOneAndUpdate(
+      { _id: CUSTOMER_TOKEN_COUNTER },
+      { $inc: { sequence: 1 } },
+      { returnDocument: 'after' },
+    );
+    const counterDocument: { sequence?: number } | null =
+      nextCounter && typeof nextCounter === 'object' && 'value' in nextCounter
+        ? (nextCounter.value as { sequence?: number } | null)
+        : nextCounter;
+    sequence = counterDocument?.sequence ?? 1;
+  }
   const customer: CustomerRecord = {
     id: randomUUID(),
     name: input.name,
