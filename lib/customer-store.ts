@@ -84,17 +84,18 @@ export async function createCustomer(input: CreateCustomerInput) {
 
   const today = getISTDateString();
 
-  // Atomically reset to 0 for a new IST day (no-op if already reset today),
-  // then atomically increment — both in separate atomic ops to avoid races.
+  // If it's a new day, reset the counter. The $lt filter on date ensures only
+  // one writer wins the reset even under concurrent requests (no upsert here —
+  // the document is created by the findOneAndUpdate below if missing).
   await counters.updateOne(
-    { _id: CUSTOMER_TOKEN_COUNTER, date: { $ne: today } },
+    { _id: CUSTOMER_TOKEN_COUNTER, date: { $lt: today } },
     { $set: { sequence: 0, date: today } },
-    { upsert: true },
   );
 
+  // Atomically increment (or create at 1 if the document doesn't exist yet).
   const nextCounter = await counters.findOneAndUpdate(
     { _id: CUSTOMER_TOKEN_COUNTER },
-    { $inc: { sequence: 1 } },
+    { $inc: { sequence: 1 }, $setOnInsert: { date: today } },
     { returnDocument: 'after', upsert: true },
   );
 
