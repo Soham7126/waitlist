@@ -23,8 +23,8 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res.ok) {
-      router.push('/');
       router.refresh();
+      router.push('/');
     } else {
       setError('Incorrect password. Please try again.');
     }

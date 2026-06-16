@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const tableNumbers = parseTableNumbers(body?.tableNumbers);
 
-    if (!body?.name || !body?.partySize || !body?.waitTime || !body?.type || !body?.phone || !tableNumbers) {
+    if (!body?.name || !body?.partySize || !body?.waitTime || !body?.type || !tableNumbers) {
       return NextResponse.json(
         { error: 'Missing or invalid required customer fields' },
         { status: 400 },

@@ -84,29 +84,25 @@ export async function createCustomer(input: CreateCustomerInput) {
 
   const today = getISTDateString();
 
-  // Reset counter to 1 if it's a new IST day, otherwise increment
-  const existing = await counters.findOne({ _id: CUSTOMER_TOKEN_COUNTER });
-  let sequence: number;
+  // Atomically reset to 0 for a new IST day (no-op if already reset today),
+  // then atomically increment — both in separate atomic ops to avoid races.
+  await counters.updateOne(
+    { _id: CUSTOMER_TOKEN_COUNTER, date: { $ne: today } },
+    { $set: { sequence: 0, date: today } },
+    { upsert: true },
+  );
 
-  if (!existing || existing.date !== today) {
-    await counters.updateOne(
-      { _id: CUSTOMER_TOKEN_COUNTER },
-      { $set: { sequence: 1, date: today } },
-      { upsert: true },
-    );
-    sequence = 1;
-  } else {
-    const nextCounter = await counters.findOneAndUpdate(
-      { _id: CUSTOMER_TOKEN_COUNTER },
-      { $inc: { sequence: 1 } },
-      { returnDocument: 'after' },
-    );
-    const counterDocument: { sequence?: number } | null =
-      nextCounter && typeof nextCounter === 'object' && 'value' in nextCounter
-        ? (nextCounter.value as { sequence?: number } | null)
-        : nextCounter;
-    sequence = counterDocument?.sequence ?? 1;
-  }
+  const nextCounter = await counters.findOneAndUpdate(
+    { _id: CUSTOMER_TOKEN_COUNTER },
+    { $inc: { sequence: 1 } },
+    { returnDocument: 'after', upsert: true },
+  );
+
+  const counterDocument: { sequence?: number } | null =
+    nextCounter && typeof nextCounter === 'object' && 'value' in nextCounter
+      ? (nextCounter.value as { sequence?: number } | null)
+      : nextCounter;
+  const sequence = counterDocument?.sequence ?? 1;
   const customer: CustomerRecord = {
     id: randomUUID(),
     name: input.name,

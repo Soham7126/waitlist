@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { deleteCustomer, getCustomerById, updateCustomerStatus } from '@/lib/customer-store';
+import type { CustomerStatus } from '@/lib/customer-store';
+
+const VALID_STATUSES: CustomerStatus[] = ['waiting', 'ready', 'seated', 'cancelled'];
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -8,6 +11,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     if (!body?.status) {
       return NextResponse.json({ error: 'Missing status' }, { status: 400 });
+    }
+
+    if (!VALID_STATUSES.includes(body.status)) {
+      return NextResponse.json(
+        { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
+        { status: 400 },
+      );
     }
 
     const existingCustomer = await getCustomerById(id);
@@ -32,7 +42,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await deleteCustomer(id);
+    const result = await deleteCustomer(id);
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('DELETE /api/customers/[id] failed', error);
