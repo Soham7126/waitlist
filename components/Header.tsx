@@ -10,9 +10,11 @@ export default function Header({ onAddClick }: HeaderProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="flex h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs sm:text-sm">
-              GT
-            </div>
+            <img
+              src="/image.png"
+              alt="The Green Table Logo"
+              className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 rounded-lg"
+            />
             <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">The Green Table</h1>
           </div>
           <button
