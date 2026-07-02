@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Clock, Bell, Users, Hourglass } from 'lucide-react';
 
 interface StatsCardProps {
@@ -9,7 +10,7 @@ interface StatsCardProps {
   };
 }
 
-const StatCard = ({
+const StatCard = memo(function StatCard({
   label,
   value,
   icon: Icon,
@@ -19,7 +20,7 @@ const StatCard = ({
   value: string | number;
   icon: React.ComponentType<{ size: number; className?: string }>;
   color: string;
-}) => {
+}) {
   return (
     <div className="rounded-xl bg-white p-4 sm:p-6 border border-border">
       <div className="flex items-start justify-between gap-3">
@@ -33,7 +34,7 @@ const StatCard = ({
       </div>
     </div>
   );
-};
+});
 
 export default function StatsCards({ stats }: StatsCardProps) {
   return (

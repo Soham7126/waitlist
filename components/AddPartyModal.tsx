@@ -94,10 +94,10 @@ export default function AddPartyModal({
 
         if (
           tableNumbers.length === 0 ||
-          tableNumbers.length > 2 ||
+          tableNumbers.length > 5 ||
           tableNumbers.length !== formData.tableNumbers.split(',').length
         ) {
-          setSubmissionError('Enter one or two table numbers separated by a comma.');
+          setSubmissionError('Enter up to five table numbers separated by a comma.');
           return;
         }
 
@@ -210,13 +210,13 @@ export default function AddPartyModal({
               value={formData.tableNumbers}
               onChange={handleChange}
               placeholder="e.g. 12, 13"
-              pattern="\s*[0-9]+\s*(,\s*[0-9]+\s*)?"
-              title="Enter one or two table numbers separated by a comma"
+              pattern="\s*[0-9]+\s*(,\s*[0-9]+\s*){0,4}"
+              title="Enter up to five table numbers separated by a comma"
               required
               className="w-full rounded-lg border border-border px-3 sm:px-4 py-2 sm:py-3 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Enter up to two table numbers, separated by a comma.
+              Enter up to five table numbers, separated by a comma.
             </p>
           </div>
 

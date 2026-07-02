@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -50,7 +50,7 @@ function buildDailyData(customers: Customer[], days: number) {
   }));
 }
 
-function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
+const SummaryCard = memo(function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
@@ -60,18 +60,23 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
       <span className="text-xs text-muted-foreground">total customers</span>
     </div>
   );
-}
+});
 
 export default function AnalyticsTab({ customers }: AnalyticsTabProps) {
-  const data30 = useMemo(() => buildDailyData(customers, 30), [customers]);
+  const activeCustomers = useMemo(
+    () => customers.filter((c) => c.status !== 'cancelled'),
+    [customers]
+  );
+
+  const data30 = useMemo(() => buildDailyData(activeCustomers, 30), [activeCustomers]);
 
   const totals = useMemo(() => {
     const t: Record<string, number> = { 'Walk-in': 0, 'Easy Diner': 0, 'Swiggy Dineout': 0, 'Zomato': 0 };
-    for (const c of customers) {
+    for (const c of activeCustomers) {
       if (t[c.type] !== undefined) t[c.type]++;
     }
     return t;
-  }, [customers]);
+  }, [activeCustomers]);
 
   const totalAll = Object.values(totals).reduce((s, v) => s + v, 0);
 
@@ -146,7 +151,7 @@ export default function AnalyticsTab({ customers }: AnalyticsTabProps) {
 
       {/* Last-updated note */}
       <p className="text-xs text-muted-foreground text-right">
-        Data reflects all customers in the system &middot; refreshes with the page
+        Data excludes cancelled bookings &middot; refreshes with the page
       </p>
     </div>
   );

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
 import StatsCards from '@/components/StatsCards';
 import QueueTabs from '@/components/QueueTabs';
 import QueueTable from '@/components/QueueTable';
-import AddPartyModal from '@/components/AddPartyModal';
-import AnalyticsTab from '@/components/AnalyticsTab';
+
+const AddPartyModal = dynamic(() => import('@/components/AddPartyModal'));
+const AnalyticsTab = dynamic(() => import('@/components/AnalyticsTab'));
 
 export interface Customer {
   id: string;
@@ -58,23 +60,39 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const activeCustomers = customers.filter((c) => c.status === 'waiting' || c.status === 'ready');
-  const seatedCustomers = customers.filter((c) => c.status === 'seated' || c.status === 'cancelled');
+  const { activeCustomers, seatedCustomers, stats } = useMemo(() => {
+    const active: Customer[] = [];
+    const seated: Customer[] = [];
+    let waiting = 0;
+    let ready = 0;
+    let seatedToday = 0;
+    let activeWaitSum = 0;
 
-  const stats = {
-    waiting: customers.filter((c) => c.status === 'waiting').length,
-    ready: customers.filter((c) => c.status === 'ready').length,
-    seatedToday: customers.filter((c) => c.status === 'seated').length,
-    avgWait:
-      activeCustomers.length === 0
-        ? 0
-        : Math.round(
-            activeCustomers.reduce((sum, c) => sum + c.waitTime, 0) /
-              activeCustomers.length
-          ),
-  };
+    for (const c of customers) {
+      if (c.status === 'waiting' || c.status === 'ready') {
+        active.push(c);
+        activeWaitSum += c.waitTime;
+        if (c.status === 'waiting') waiting++;
+        else ready++;
+      } else {
+        seated.push(c);
+        if (c.status === 'seated') seatedToday++;
+      }
+    }
 
-  const handleSaveCustomer = async (data: {
+    return {
+      activeCustomers: active,
+      seatedCustomers: seated,
+      stats: {
+        waiting,
+        ready,
+        seatedToday,
+        avgWait: active.length === 0 ? 0 : Math.round(activeWaitSum / active.length),
+      },
+    };
+  }, [customers]);
+
+  const handleSaveCustomer = useCallback(async (data: {
     name: string;
     partySize: number;
     waitTime: number;
@@ -110,9 +128,9 @@ export default function Home() {
         : [...currentCustomers, normalizedCustomer];
     });
     setEditingCustomer(null);
-  };
+  }, [editingCustomer]);
 
-  const handleStatusChange = async (id: string, status: Customer['status']) => {
+  const handleStatusChange = useCallback(async (id: string, status: Customer['status']) => {
     const response = await fetch(`/api/customers/${id}`, {
       method: 'PATCH',
       headers: {
@@ -136,33 +154,33 @@ export default function Home() {
           : customer
       )
     );
-  };
+  }, []);
 
-  const handleMarkReady = (id: string) => {
+  const handleMarkReady = useCallback((id: string) => {
     void handleStatusChange(id, 'ready').catch((error) => {
       console.error('Failed to mark customer ready', error);
     });
-  };
+  }, [handleStatusChange]);
 
-  const handleUndoReady = (id: string) => {
+  const handleUndoReady = useCallback((id: string) => {
     void handleStatusChange(id, 'waiting').catch((error) => {
       console.error('Failed to undo ready', error);
     });
-  };
+  }, [handleStatusChange]);
 
-  const handleSeat = (id: string) => {
+  const handleSeat = useCallback((id: string) => {
     void handleStatusChange(id, 'seated').catch((error) => {
       console.error('Failed to seat customer', error);
     });
-  };
+  }, [handleStatusChange]);
 
-  const handleCancel = (id: string) => {
+  const handleCancel = useCallback((id: string) => {
     void handleStatusChange(id, 'cancelled').catch((error) => {
       console.error('Failed to cancel customer', error);
     });
-  };
+  }, [handleStatusChange]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const response = await fetch(`/api/customers/${id}`, {
       method: 'DELETE',
     });
@@ -172,17 +190,17 @@ export default function Home() {
     }
 
     setCustomers((currentCustomers) => currentCustomers.filter((customer) => customer.id !== id));
-  };
+  }, []);
 
-  const handleEditCustomer = (customer: Customer) => {
+  const handleEditCustomer = useCallback((customer: Customer) => {
     setEditingCustomer(customer);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setEditingCustomer(null);
-  };
+  }, []);
 
   const modalInitialValues = editingCustomer
     ? {

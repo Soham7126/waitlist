@@ -72,12 +72,6 @@ export async function getCustomerById(id: string) {
   return record ? decryptRecord(record) : null;
 }
 
-export async function getWaitlistPosition(sequence: number) {
-  const database = await getDatabase();
-  const { customers } = getCollections(database);
-  return customers.countDocuments({ status: 'waiting', sequence: { $lte: sequence } });
-}
-
 export async function createCustomer(input: CreateCustomerInput) {
   const database = await getDatabase();
   const { customers, counters } = getCollections(database);
@@ -135,13 +129,11 @@ export async function updateCustomer(id: string, updates: Partial<CreateCustomer
     ...(updates.tableNumbers !== undefined ? { tableNumbers: updates.tableNumbers } : {}),
   };
 
-  const updateResult = await customers.updateOne({ id }, { $set: fieldsToUpdate });
-
-  if (updateResult.matchedCount === 0) {
-    return null;
-  }
-
-  const record = await customers.findOne({ id });
+  const record = await customers.findOneAndUpdate(
+    { id },
+    { $set: fieldsToUpdate },
+    { returnDocument: 'after' },
+  );
   return record ? decryptRecord(record) : null;
 }
 
@@ -149,16 +141,11 @@ export async function updateCustomerStatus(id: string, status: CustomerStatus) {
   const database = await getDatabase();
   const { customers } = getCollections(database);
 
-  const updateResult = await customers.updateOne(
+  const record = await customers.findOneAndUpdate(
     { id },
     { $set: { status } },
+    { returnDocument: 'after' },
   );
-
-  if (updateResult.matchedCount === 0) {
-    return null;
-  }
-
-  const record = await customers.findOne({ id });
   return record ? decryptRecord(record) : null;
 }
 

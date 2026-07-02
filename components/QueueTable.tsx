@@ -1,9 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo } from 'react';
 import { format } from 'date-fns';
 import { Bell, Check, Undo2 } from 'lucide-react';
 import type { Customer } from '@/app/page';
+import { useTicker } from '@/lib/useTicker';
+
+const tableListFormatter = new Intl.ListFormat('en', { style: 'short', type: 'conjunction' });
+const formatTableNumbers = (tableNumbers: number[]) =>
+  tableListFormatter.format(tableNumbers.map(String));
 
 interface QueueTableProps {
   customers: Customer[];
@@ -20,10 +25,8 @@ interface QueueTableProps {
 
 const StatusBadge = ({
   status,
-  remainingTime,
 }: {
   status: 'waiting' | 'ready' | 'seated' | 'cancelled';
-  remainingTime?: number;
 }) => {
   let bgColor = 'bg-blue-100 text-blue-700';
   let text = 'Waiting';
@@ -46,13 +49,15 @@ const StatusBadge = ({
   );
 };
 
-const TimerBadge = ({ remainingSeconds }: { remainingSeconds: number }) => {
+const TimerBadge = ({ remainingSeconds, isExpired }: { remainingSeconds: number; isExpired: boolean }) => {
   const minutes = Math.floor(Math.max(0, remainingSeconds) / 60);
   const seconds = Math.max(0, remainingSeconds) % 60;
   const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   let bgColor = 'bg-green-100 text-green-700';
-  if (remainingSeconds <= 60) {
+  if (isExpired) {
+    bgColor = 'bg-red-200 text-red-800';
+  } else if (remainingSeconds <= 60) {
     bgColor = 'bg-red-100 text-red-700';
   } else if (remainingSeconds <= 300) {
     bgColor = 'bg-yellow-100 text-yellow-700';
@@ -65,6 +70,23 @@ const TimerBadge = ({ remainingSeconds }: { remainingSeconds: number }) => {
   );
 };
 
+const WaitingTooLongBadge = () => (
+  <span className="inline-block rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+    Waiting Too Long
+  </span>
+);
+
+function useExpiry(customer: Customer, now: number) {
+  const isTracked = customer.status !== 'seated' && customer.status !== 'cancelled';
+  const startTime = customer.addedAt.getTime();
+  const totalWaitSeconds = customer.waitTime * 60;
+  const elapsedSeconds = Math.floor((now - startTime) / 1000);
+  const remainingSeconds = Math.max(0, totalWaitSeconds - elapsedSeconds);
+  const isExpired = isTracked && elapsedSeconds >= totalWaitSeconds;
+
+  return { remainingSeconds, isExpired };
+}
+
 const TypeBadge = ({ type }: { type: string }) => {
   const isPhone = type.toLowerCase() === 'phone';
   const bgColor = isPhone ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700';
@@ -76,8 +98,9 @@ const TypeBadge = ({ type }: { type: string }) => {
   );
 };
 
-const CustomerCard = ({
+const CustomerCard = memo(function CustomerCard({
   customer,
+  now,
   onMarkReady,
   onUndoReady,
   onSeat,
@@ -87,6 +110,7 @@ const CustomerCard = ({
   isHistoryView,
 }: {
   customer: Customer;
+  now: number;
   onMarkReady: (id: string) => void;
   onUndoReady: (id: string) => void;
   onSeat: (id: string) => void;
@@ -94,32 +118,15 @@ const CustomerCard = ({
   onDelete: (id: string) => void;
   onEdit: (customer: Customer) => void;
   isHistoryView: boolean;
-}) => {
-  const [remainingSeconds, setRemainingSeconds] = useState(customer.waitTime * 60);
-
-  useEffect(() => {
-    if (customer.status === 'seated' || customer.status === 'cancelled') {
-      return;
-    }
-
-    const startTime = customer.addedAt.getTime();
-    const totalWaitSeconds = customer.waitTime * 60;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsedSeconds = Math.floor((now - startTime) / 1000);
-      const remaining = Math.max(0, totalWaitSeconds - elapsedSeconds);
-      setRemainingSeconds(remaining);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [customer]);
-
+}) {
+  const { remainingSeconds, isExpired } = useExpiry(customer, now);
   const formattedTime = format(customer.addedAt, 'hh:mm a');
 
   return (
     <div
-      className="rounded-lg border border-border bg-white p-4 space-y-3 cursor-pointer transition-shadow hover:shadow-md"
+      className={`rounded-lg border p-4 space-y-3 cursor-pointer transition-shadow hover:shadow-md ${
+        isExpired ? 'border-red-400 bg-red-50' : 'border-border bg-white'
+      }`}
       onDoubleClick={() => onEdit(customer)}
       title="Double-click to edit"
     >
@@ -132,7 +139,7 @@ const CustomerCard = ({
               <span className="text-xs text-muted-foreground">👤 {customer.partySize}</span>
               {customer.tableNumbers?.length > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  Table {customer.tableNumbers.join(' & ')}
+                  Table{customer.tableNumbers.length > 1 ? 's' : ''} {formatTableNumbers(customer.tableNumbers)}
                 </span>
               )}
               {customer.phone && <span className="text-xs text-muted-foreground">{customer.phone}</span>}
@@ -140,7 +147,10 @@ const CustomerCard = ({
             </div>
           </div>
         </div>
-        <StatusBadge status={customer.status} />
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge status={customer.status} />
+          {isExpired && <WaitingTooLongBadge />}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border">
@@ -152,7 +162,7 @@ const CustomerCard = ({
           <span className="text-muted-foreground">Wait</span>
           <div className="mt-1">
             {customer.status !== 'seated' && customer.status !== 'cancelled' && (
-              <TimerBadge remainingSeconds={remainingSeconds} />
+              <TimerBadge remainingSeconds={remainingSeconds} isExpired={isExpired} />
             )}
           </div>
         </div>
@@ -224,10 +234,11 @@ const CustomerCard = ({
       </div>
     </div>
   );
-};
+});
 
-const CustomerRow = ({
+const CustomerRow = memo(function CustomerRow({
   customer,
+  now,
   onMarkReady,
   onUndoReady,
   onSeat,
@@ -237,6 +248,7 @@ const CustomerRow = ({
   isHistoryView,
 }: {
   customer: Customer;
+  now: number;
   onMarkReady: (id: string) => void;
   onUndoReady: (id: string) => void;
   onSeat: (id: string) => void;
@@ -244,32 +256,15 @@ const CustomerRow = ({
   onDelete: (id: string) => void;
   onEdit: (customer: Customer) => void;
   isHistoryView: boolean;
-}) => {
-  const [remainingSeconds, setRemainingSeconds] = useState(customer.waitTime * 60);
-
-  useEffect(() => {
-    if (customer.status === 'seated' || customer.status === 'cancelled') {
-      return;
-    }
-
-    const startTime = customer.addedAt.getTime();
-    const totalWaitSeconds = customer.waitTime * 60;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsedSeconds = Math.floor((now - startTime) / 1000);
-      const remaining = Math.max(0, totalWaitSeconds - elapsedSeconds);
-      setRemainingSeconds(remaining);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [customer]);
-
+}) {
+  const { remainingSeconds, isExpired } = useExpiry(customer, now);
   const formattedTime = format(customer.addedAt, 'hh:mm a');
 
   return (
     <tr
-      className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
+      className={`border-b transition-colors cursor-pointer ${
+        isExpired ? 'border-red-200 bg-red-50 hover:bg-red-100' : 'border-border hover:bg-muted/50'
+      }`}
       onDoubleClick={() => onEdit(customer)}
       title="Double-click to edit"
     >
@@ -281,7 +276,7 @@ const CustomerRow = ({
         <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1 flex-wrap">
           <span>👤 {customer.partySize}</span>
           {customer.tableNumbers?.length > 0 && (
-            <span>Table {customer.tableNumbers.join(' & ')}</span>
+            <span>Table{customer.tableNumbers.length > 1 ? 's' : ''} {formatTableNumbers(customer.tableNumbers)}</span>
           )}
           {customer.phone && <span className="hidden sm:inline">{customer.phone}</span>}
           <TypeBadge type={customer.type} />
@@ -290,11 +285,14 @@ const CustomerRow = ({
       <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-foreground">{formattedTime}</td>
       <td className="px-4 sm:px-6 py-4">
         {customer.status !== 'seated' && customer.status !== 'cancelled' && (
-          <TimerBadge remainingSeconds={remainingSeconds} />
+          <TimerBadge remainingSeconds={remainingSeconds} isExpired={isExpired} />
         )}
       </td>
       <td className="px-4 sm:px-6 py-4">
-        <StatusBadge status={customer.status} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatusBadge status={customer.status} />
+          {isExpired && <WaitingTooLongBadge />}
+        </div>
       </td>
       <td className="px-4 sm:px-6 py-4">
         <div className="flex gap-2 items-center flex-wrap">
@@ -365,7 +363,7 @@ const CustomerRow = ({
       </td>
     </tr>
   );
-};
+});
 
 export default function QueueTable({
   customers,
@@ -379,6 +377,8 @@ export default function QueueTable({
   isEmpty,
   isLoading,
 }: QueueTableProps) {
+  const now = useTicker();
+
   return (
     <div className="mt-4">
       {isLoading ? (
@@ -399,6 +399,7 @@ export default function QueueTable({
               <CustomerCard
                 key={customer.id}
                 customer={customer}
+                now={now}
                 onMarkReady={onMarkReady}
                 onUndoReady={onUndoReady}
                 onSeat={onSeat}
@@ -440,6 +441,7 @@ export default function QueueTable({
                   <CustomerRow
                     key={customer.id}
                     customer={customer}
+                    now={now}
                     onMarkReady={onMarkReady}
                     onUndoReady={onUndoReady}
                     onSeat={onSeat}

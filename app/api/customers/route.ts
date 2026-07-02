@@ -12,7 +12,7 @@ function parseTableNumbers(value: unknown) {
 
   const tableNumbers = value.map(Number);
   return tableNumbers.length >= 1 &&
-    tableNumbers.length <= 2 &&
+    tableNumbers.length <= 5 &&
     tableNumbers.every((tableNumber) => Number.isInteger(tableNumber) && tableNumber > 0)
     ? tableNumbers
     : null;
@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
     }
 
     if (body.tableNumbers !== undefined && !tableNumbers) {
-      return NextResponse.json({ error: 'Enter one or two valid table numbers' }, { status: 400 });
+      return NextResponse.json({ error: 'Enter up to five valid table numbers' }, { status: 400 });
     }
 
     const validTableNumbers = tableNumbers ?? undefined;
