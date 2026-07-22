@@ -6,9 +6,10 @@ import { useState } from 'react';
 
 interface HeaderProps {
   onAddClick: () => void;
+  onAddBookingClick: () => void;
 }
 
-export default function Header({ onAddClick }: HeaderProps) {
+export default function Header({ onAddClick, onAddBookingClick }: HeaderProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -27,6 +28,13 @@ export default function Header({ onAddClick }: HeaderProps) {
             <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">The Green Table</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <button
+              onClick={onAddBookingClick}
+              className="flex items-center gap-1 sm:gap-2 rounded-lg bg-green-600 px-3 sm:px-6 py-2 sm:py-2.5 text-white font-semibold hover:bg-green-700 transition-colors text-sm sm:text-base"
+            >
+              <span className="hidden sm:inline">Booking</span>
+              <span className="sm:hidden">Book</span>
+            </button>
             <button
               onClick={onAddClick}
               className="flex items-center gap-1 sm:gap-2 rounded-lg bg-blue-600 px-3 sm:px-6 py-2 sm:py-2.5 text-white font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"

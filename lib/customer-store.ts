@@ -34,7 +34,11 @@ function encryptPhone(phone: string | undefined): string | undefined {
 
 function decryptRecord(record: CustomerRecord): CustomerRecord {
   if (record.phone && isEncrypted(record.phone)) {
-    return { ...record, phone: decrypt(record.phone) };
+    try {
+      return { ...record, phone: decrypt(record.phone) };
+    } catch {
+      return { ...record, phone: undefined };
+    }
   }
   return record;
 }

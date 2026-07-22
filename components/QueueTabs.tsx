@@ -1,12 +1,13 @@
 interface QueueTabsProps {
-  activeTab: 'active' | 'history' | 'analytics';
-  onTabChange: (tab: 'active' | 'history' | 'analytics') => void;
+  activeTab: 'active' | 'history' | 'bookings' | 'analytics';
+  onTabChange: (tab: 'active' | 'history' | 'bookings' | 'analytics') => void;
 }
 
 export default function QueueTabs({ activeTab, onTabChange }: QueueTabsProps) {
-  const tabs: { key: 'active' | 'history' | 'analytics'; label: string; shortLabel: string }[] = [
+  const tabs: { key: 'active' | 'history' | 'bookings' | 'analytics'; label: string; shortLabel: string }[] = [
     { key: 'active', label: 'Active Queue', shortLabel: 'Active' },
     { key: 'history', label: 'History', shortLabel: 'History' },
+    { key: 'bookings', label: 'Bookings', shortLabel: 'Bookings' },
     { key: 'analytics', label: 'Analytics', shortLabel: 'Analytics' },
   ];
 
