@@ -47,6 +47,12 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'active' | 'history' | 'bookings' | 'analytics'>('active');
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingsLoading, setIsBookingsLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDate(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadCustomers = useCallback(async () => {
     try {
@@ -90,6 +96,8 @@ export default function Home() {
     let ready = 0;
     let seatedToday = 0;
     let activeWaitSum = 0;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const todayIST = new Date(currentDate.getTime() + istOffset).toISOString().slice(0, 10);
 
     for (const c of customers) {
       if (c.status === 'waiting' || c.status === 'ready') {
@@ -99,7 +107,9 @@ export default function Home() {
         else ready++;
       } else {
         seated.push(c);
-        if (c.status === 'seated') seatedToday++;
+        if (c.status === 'seated' && new Date(c.addedAt).toISOString().slice(0, 10) === todayIST) {
+          seatedToday++;
+        }
       }
     }
 
@@ -113,7 +123,7 @@ export default function Home() {
         avgWait: active.length === 0 ? 0 : Math.round(activeWaitSum / active.length),
       },
     };
-  }, [customers]);
+  }, [customers, currentDate]);
 
   const handleSaveCustomer = useCallback(async (data: {
     name: string;
